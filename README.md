@@ -8,6 +8,7 @@ Current Functions:
   - Average power and toughtness of creatures
 
 Roadmap:
+  - Mana symbols and mana symbols on lands, lands required calculator (far future: The "Auto-Lander")
   - Implementation of Scryfall Wrapper for Scryfall Tagger functions
       - Removal-o-meter
       - Strictly better
