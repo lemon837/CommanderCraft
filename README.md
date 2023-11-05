@@ -10,17 +10,19 @@ Current Functions:
   - Artist information and set information, commonalities
   - Creature type information, commonalities
   - EDHREC Ranking information, how boring is your deck?
+  - Implemented Selenium webscraping from the Scryfall Tagger site
+      - Currently just creates lists of art and function tags
 
 For Bulk Data Testing
   - Average EDHREC ranks
 
 Roadmap:
   - Lands required calculator (far future: The "Auto-Lander")
-  - Implementation of Scryfall Wrapper for Scryfall Tagger functions
+  - Scryfall Tagger functions:
       - Removal-o-meter / Interactivity-o-meter
       - Card draw levels, ramp levels
       - Strictly better
-      - Art tags! Trends and commonalities
+      - Art tags Trends and commonalities
   - Using EDHREC data, all possible combos, potential combos by adding one more card etc
   - Pricing information (combine this with "strictly worse" tags for a downgrader function?)
   - Token information, what tokens are required to play and how many of them on average
