@@ -15,6 +15,7 @@ A multiuse EDH deck analyser
 import json
 import math
 import mtg_parser
+from collections import Counter
 
 # Global variables
 commandercolours = []
@@ -109,10 +110,24 @@ def basic_functions(decklist):
                 for char in card['produced_mana']:
                     if char.isalpha():
                         landmanasymbols[char] += 1
-
     totalsymbols = manasymbols['W'] + manasymbols['U'] + manasymbols['B'] + manasymbols['R'] + manasymbols['G']
     totallandsymbols = (landmanasymbols['C'] + landmanasymbols['W'] + landmanasymbols['U'] + landmanasymbols['B'] +
                         landmanasymbols['R'] + landmanasymbols['G'])
+
+    # Most common artist and set
+    artists = []
+    sets = []
+    types = []
+    for card in decklist:
+        artists.append(card['artist'])
+        if 'Creature' in card['type_line']:
+            creaturetypes = card['type_line'].split('—', 1)
+            types.extend(creaturetypes[1].split())
+        if 'Basic Land' not in card['type_line']:
+            sets.append(card['set'])
+    commonartists = Counter(artists)
+    commonsets = Counter(sets)
+    commontypes = Counter(types)
 
     # Print stats
     print('Average CMC: ' + str(round(avgcmc, 2)) + ' (including lands: ' + str(round(avgcmclands, 2)) + ')')
@@ -129,6 +144,25 @@ def basic_functions(decklist):
             percentage = math.ceil((landmanasymbols[symbol] / totallandsymbols) * 100)
             print(landmanasymbols[symbol], 'out of', typedist['lands'], 'lands produce', symbol, 'mana (', percentage,
                   '% of all mana symbols on lands )')
+    print(max(commonartists, key=commonartists.get), 'is the most common artist (consisting of',
+          max(commonartists.values()), 'cards)')
+    print(max(commonsets, key=commonsets.get), 'is the most common set (consisting of', max(commonsets.values()),
+          'cards)')
+    print(max(commontypes, key=commontypes.get), 'is the most common set (consisting of', max(commontypes.values()),
+          'cards)')
+
+
+def boring_levels(decklist):
+    """
+    Takes a decklist input and prints information on the boring levels of deck
+    :param decklist:
+    """
+    edhrectotal = 0
+    for card in decklist:
+        if 'edhrec_rank' in card:
+            edhrectotal += card['edhrec_rank']
+    edhrectotal /= 100
+    print('Average EDHREC rank:', edhrectotal)
 
 
 def process_deck(deckinput):
@@ -162,6 +196,7 @@ def main():
     if not check_legality(decklist):
         exit("Deck illegal, exiting...")
     basic_functions(decklist)
+    boring_levels(decklist)
 
 
 if __name__ == '__main__':
