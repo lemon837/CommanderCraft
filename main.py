@@ -13,9 +13,15 @@ A multiuse EDH deck analyser
 # Gaffer: https://www.moxfield.com/decks/5TJaqTq0QUmxfZP5J5MY6w
 # Teysa: https://www.moxfield.com/decks/mskhYkY4vUenK3khBTrcMg
 import json
+import math
 import mtg_parser
-# from collections import Counter
 
+# Global variables
+commandercolours = []
+manasymbols = {'N': 0, 'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0}
+landmanasymbols = {'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0}
+typedist = {'planeswalkers': 0, 'creatures': 0, 'sorceries': 0, 'instants': 0, 'artifacts': 0, 'enchantments': 0,
+            'lands': 0}
 # Loads the Scryfall card data from JSON to Python dictionary
 print('Retrieving Card Data...')
 dataform = str("oracle_cards.json").strip("'<>() ").replace('\'', '\"')
@@ -32,7 +38,7 @@ def check_legality(decklist):
     :return true if legal, false if illegal:
     """
     print('Checking deck legality...')
-    commandercolours = decklist[0]['color_identity']
+    commandercolours.extend(decklist[0]['color_identity'])
     print("Commander's colour identity: " + str(commandercolours))
     if not len(decklist) == 100:
         print('Legality error: Deck is not 100 cards')
@@ -50,32 +56,31 @@ def check_legality(decklist):
 
 def basic_functions(decklist):
     """
-    Takes a decklist input and provides a very basic analysis of the deck statistics
+    Takes a decklist input and prints a basic analysis of the deck statistics
     :param decklist:
     """
     # Type distribution
-    planeswalkers = creatures = sorceries = instants = artifacts = enchantments = lands = 0
     for card in decklist:
         if 'Planeswalker' in card['type_line']:
-            planeswalkers += 1
+            typedist['planeswalkers'] += 1
             continue
         if 'Creature' in card['type_line']:
-            creatures += 1
+            typedist['creatures'] += 1
             continue
         if 'Sorcery' in card['type_line']:
-            sorceries += 1
+            typedist['sorceries'] += 1
             continue
         if 'Instant' in card['type_line']:
-            instants += 1
+            typedist['instants'] += 1
             continue
         if 'Artifact' in card['type_line']:
-            artifacts += 1
+            typedist['artifacts'] += 1
             continue
         if 'Enchantment' in card['type_line']:
-            enchantments += 1
+            typedist['enchantments'] += 1
             continue
         if 'Land' in card['type_line']:
-            lands += 1
+            typedist['lands'] += 1
 
     # Average CMC, Power and Toughness
     avgcmc = avgpwr = avgtuf = 0.0
@@ -88,17 +93,42 @@ def basic_functions(decklist):
             avgpwr += float(card['power'])
             avgtuf += float(card['toughness'])
             statcounter += 1.0
-    avgcmclands = avgcmc / (cmccounter + lands)
+    avgcmclands = avgcmc / (cmccounter + typedist['lands'])
     avgcmc /= cmccounter
     avgpwr /= statcounter
     avgtuf /= statcounter
 
+    # Mana symbols and card colours
+    for card in decklist:
+        if 'Land' not in card['type_line']:
+            for char in card['mana_cost']:
+                if char.isalpha():
+                    manasymbols[char] += 1
+        else:
+            if 'produced_mana' in card:
+                for char in card['produced_mana']:
+                    if char.isalpha():
+                        landmanasymbols[char] += 1
+
+    totalsymbols = manasymbols['W'] + manasymbols['U'] + manasymbols['B'] + manasymbols['R'] + manasymbols['G']
+    totallandsymbols = (landmanasymbols['C'] + landmanasymbols['W'] + landmanasymbols['U'] + landmanasymbols['B'] +
+                        landmanasymbols['R'] + landmanasymbols['G'])
+
     # Print stats
     print('Average CMC: ' + str(round(avgcmc, 2)) + ' (including lands: ' + str(round(avgcmclands, 2)) + ')')
     print('Average Power and Toughness: ' + str(round(avgpwr, 2)) + ' / ' + str(round(avgtuf, 2)))
-    print('Card Type Distributions:\n\tPlaneswalkers: ' + str(planeswalkers) + '\n\tCreatures: ' + str(creatures) +
-          '\n\tSorceries: ' + str(sorceries) + '\n\tInstants: ' + str(instants) + '\n\tArtifacts: ' + str(artifacts) +
-          '\n\tEnchantments: ' + str(enchantments) + '\n\tLands: ' + str(lands))
+    print('Card Type Distributions: ')
+    for cardtype in typedist.keys():
+        print('\t' + cardtype, typedist[cardtype])
+    for symbol in manasymbols:
+        if not manasymbols[symbol] == 0:
+            percentage = math.ceil((manasymbols[symbol] / totalsymbols) * 100)
+            print(str(percentage) + '% of all mana symbols are ' + symbol)
+    for symbol in landmanasymbols:
+        if (not landmanasymbols[symbol] == 0 and symbol in commandercolours) or symbol == 'C':
+            percentage = math.ceil((landmanasymbols[symbol] / totallandsymbols) * 100)
+            print(landmanasymbols[symbol], 'out of', typedist['lands'], 'lands produce', symbol, 'mana (', percentage,
+                  '% of all mana symbols on lands )')
 
 
 def process_deck(deckinput):
@@ -125,10 +155,10 @@ def process_deck(deckinput):
 
 def main():
     """
-    Execute the main function, calling various other functions at the user's request, WIP
+    Execute the main function, calling various other functions at the user's request
     """
     print('Please input your Moxfield deck URL below: ')
-    decklist = process_deck('https://www.moxfield.com/decks/mskhYkY4vUenK3khBTrcMg')
+    decklist = process_deck('https://www.moxfield.com/decks/tg0i6LyJZkikYfyBJ7bQkA')
     if not check_legality(decklist):
         exit("Deck illegal, exiting...")
     basic_functions(decklist)
