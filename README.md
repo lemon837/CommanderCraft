@@ -6,9 +6,10 @@ Current Functions:
   - Distributions of each card type
   - Average CMC with and without lands
   - Average power and toughtness of creatures
+  - Mana symbols and mana symbols on lands
 
 Roadmap:
-  - Mana symbols and mana symbols on lands, lands required calculator (far future: The "Auto-Lander")
+  - Lands required calculator (far future: The "Auto-Lander")
   - Implementation of Scryfall Wrapper for Scryfall Tagger functions
       - Removal-o-meter
       - Strictly better
