@@ -16,6 +16,13 @@ import json
 import math
 import mtg_parser
 from collections import Counter
+from multiprocessing import Process
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # Global variables
 commandercolours = []
@@ -129,6 +136,13 @@ def basic_functions(decklist):
     commonsets = Counter(sets)
     commontypes = Counter(types)
 
+    # EDHREC Rank
+    edhrectotal = 0
+    for card in decklist:
+        if 'edhrec_rank' in card:
+            edhrectotal += card['edhrec_rank']
+    edhrectotal /= 100
+
     # Print stats
     print('Average CMC: ' + str(round(avgcmc, 2)) + ' (including lands: ' + str(round(avgcmclands, 2)) + ')')
     print('Average Power and Toughness: ' + str(round(avgpwr, 2)) + ' / ' + str(round(avgtuf, 2)))
@@ -148,20 +162,8 @@ def basic_functions(decklist):
           max(commonartists.values()), 'cards)')
     print(max(commonsets, key=commonsets.get), 'is the most common set (consisting of', max(commonsets.values()),
           'cards)')
-    print(max(commontypes, key=commontypes.get), 'is the most common set (consisting of', max(commontypes.values()),
-          'cards)')
-
-
-def boring_levels(decklist):
-    """
-    Takes a decklist input and prints information on the boring levels of deck
-    :param decklist:
-    """
-    edhrectotal = 0
-    for card in decklist:
-        if 'edhrec_rank' in card:
-            edhrectotal += card['edhrec_rank']
-    edhrectotal /= 100
+    print(max(commontypes, key=commontypes.get), 'is the most common creature type (consisting of',
+          max(commontypes.values()), 'cards)')
     print('Average EDHREC rank:', edhrectotal)
 
 
@@ -187,16 +189,68 @@ def process_deck(deckinput):
     return decklist
 
 
+def card_tags(decklist):
+    print('Beginning tag search...')
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.experimental_options['prefs'] = {
+        'profile.managed_default_content_settings.images': 2
+    }
+    driver = webdriver.Chrome(options)
+    for card in decklist:
+        if 'Basic Land' not in card['type_line']:
+            url = 'https://tagger.scryfall.com/card/' + card['set'] + '/' + str(card['collector_number'])
+            driver.get(url)
+            WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(),"
+                                                                                        "'artwork')]")))
+            page = driver.page_source
+            soup = BeautifulSoup(page, 'html.parser')
+            container = soup.find_all('div', attrs={'class': 'tag-row'})
+
+            arttags = []
+            functiontags = []
+            for element in container:
+                element = str(element)
+                if element.find('/tags/artwork/') > 0:
+                    arttag = ''
+                    substr = element.find('/tags/artwork/') + 14
+                    for char in element[substr:]:
+                        if char.isalpha():
+                            arttag = arttag + char
+                        else:
+                            break
+                    arttags.append(arttag)
+                if element.find('/tags/card/') > 0:
+                    functiontag = ''
+                    substr = element.find('/tags/card/') + 11
+                    for char in element[substr:]:
+                        if char.isalpha() or char == '-':
+                            functiontag = functiontag + char
+                        else:
+                            break
+                    functiontags.append(functiontag)
+            print('Art Tags:', arttags)
+            print('Function Tags:', functiontags)
+    driver.quit()
+
+
 def main():
     """
     Execute the main function, calling various other functions at the user's request
     """
-    print('Please input your Moxfield deck URL below: ')
-    decklist = process_deck('https://www.moxfield.com/decks/tg0i6LyJZkikYfyBJ7bQkA')
+    print('Please input your deck URL below:')
+    decklist = process_deck('https://www.moxfield.com/decks/mskhYkY4vUenK3khBTrcMg')
     if not check_legality(decklist):
-        exit("Deck illegal, exiting...")
+        exit("Deck is illegal, exiting...")
     basic_functions(decklist)
-    boring_levels(decklist)
+    p1 = Process(target=card_tags(decklist))
+    p1.start()
+    p2 = Process(target=card_tags(decklist))
+    p2.start()
+    card_tags(decklist)
 
 
 if __name__ == '__main__':
