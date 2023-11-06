@@ -1,30 +1,33 @@
 # CommanderCraft
 A multipurpose EDH deck analyser for Magic the Gathering
 
-Current Functions:
+Deck Analysis:
   - Legality checker (100 cards, colour identity, format legalities)
-  - Distributions of each card type
-  - Average CMC with and without lands
-  - Average power and toughtness of creatures
-  - Mana symbols and mana symbols on lands
-  - Artist information and set information, commonalities
-  - Creature type information, commonalities
-  - EDHREC Ranking information, how boring is your deck?
-  - Implemented Selenium webscraping from the Scryfall Tagger site
-        - Most common art and function tags
-        - Number of removal pieces
-        - PARTIALLY DONE: - Removal-o-meter / Interactivity-o-meter, card draw levels, ramp levels
-    
+  
+  - Basic Functions:
+    - Average CMC with and without lands
+    - Average power and toughtness of creatures
+    - Distributions of each card type
+    - Mana symbols on cards compared with mana symbols on lands
+    - Average EDHREC rank
+    - Artist, set, and creature type distributions
 
-For Bulk Data Testing
+  - Tagger Functions
+    - Most common art tags and function tags
+    - Counters for amount of removal, card draw, and ramp
+    - Hypergeometric probability calculations - "By turn x, y% chance to have drawn at least one card of z-type"
+    
+Bug Fixing Required:
+  - Cardtype distributions not displaying correct numbers, could be an issue with how cards are added now using
+    'default-cards.json' instead of the old method (see 'jolene.json' card distributions)
+
+For Bulk Data Testing:
   - Average EDHREC ranks
 
 Roadmap:
-  - Lands required calculator (far future: The "Auto-Lander")
-  - Scryfall Tagger functions:
-      - Strictly better
-  - Using EDHREC data, all possible combos, potential combos by adding one more card etc
-  - Pricing information (combine this with "strictly worse" tags for a downgrader function?)
+  - The "Auto-Lander", take into account mana symbols on cards and intuitively construct a 37 card landbase
   - Token information, what tokens are required to play and how many of them on average
-  - Friend suggestions:
-      - Draw-o-meter, how much of your deck will you see, factoring in draw per turn and draw effects (lot's o math)
+  - 'Strictly better/worse' and 'similar to' html code from Tagger
+  - Using EDHREC data: all possible combos, then, potential combos by adding one more card etc
+  - Pricing information (combine this with "strictly better/worse" tags for a down/upgrader function)
+  - Draw-o-meter, how much of your deck will you see, factoring in draw per turn and draw effects
