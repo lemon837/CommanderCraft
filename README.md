@@ -2,6 +2,11 @@
 A multipurpose EDH deck analyser for Magic the Gathering
 
 ### Deck Analysis:
+  - Uses bulkdata download of all default-cards from the Scryfall API, parses deck URL into rawdecklist
+  - Creates decklist from default-cards using the names, set codes and collector numbers of cards in rawdecklist
+  - Using the Selenium webscraping tool, retrieves tags for all cards in deck from Scryfall Tagger Project
+  - Dumps decklist to a .json file, to analyse now and save for later
+
   - Legality checker (100 cards, colour identity, format legalities)
   
   - Basic Functions:
