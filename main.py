@@ -31,6 +31,8 @@ manasymbols = {'N': 0, 'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0}
 landmanasymbols = {'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0}
 typedist = {'planeswalkers': 0, 'creatures': 0, 'sorceries': 0, 'instants': 0, 'artifacts': 0, 'enchantments': 0,
             'lands': 0}
+allarttags = []
+allfunctags = []
 
 
 def main():
@@ -39,7 +41,7 @@ def main():
     """
     if not os.path.isfile(r"C:\Users\Fred\Desktop\CommanderCraft\decklist.json"):
         print('Please input your deck URL below:')
-        decklist = process_deck('https://www.moxfield.com/decks/mskhYkY4vUenK3khBTrcMg')
+        decklist = process_deck('https://www.moxfield.com/decks/5TJaqTq0QUmxfZP5J5MY6w')
     else:
         print('Deck located on file! Retrieving...')
         dataform = str("decklist.json").strip("'<>() ").replace('\'', '\"')
@@ -47,7 +49,7 @@ def main():
             decklist = json.load(json_file)
     if not check_legality(decklist):
         exit("Deck is illegal, exiting...")
-    # basic_functions(decklist)
+    basic_functions(decklist)
     tagger_functions(decklist)
 
 
@@ -98,16 +100,17 @@ def card_tags(decklist):
     driver = webdriver.Chrome(options)
     for card in decklist:
         if 'Basic Land' not in card['type_line']:
+            arttags = []
+            functiontags = []
             url = 'https://tagger.scryfall.com/card/' + card['set'] + '/' + str(card['collector_number'])
             driver.get(url)
             WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(),"
                                                                                         "'artwork')]")))
             page = driver.page_source
             soup = BeautifulSoup(page, 'html.parser')
-            container = soup.find_all('div', attrs={'class': 'tag-row'})
 
-            arttags = []
-            functiontags = []
+            # Finds all non-inherited tags ('tag-row')
+            container = soup.find_all('div', attrs={'class': 'tag-row'})
             for element in container:
                 element = str(element)
                 if element.find('/tags/artwork/') > 0:
@@ -128,6 +131,40 @@ def card_tags(decklist):
                         else:
                             break
                     functiontags.append(functiontag)
+
+            # Finds all inherited tags ('tagging-ancestors')
+            container = soup.find_all('div', attrs={'class': 'tagging-ancestors'})
+            container = str(container)
+            index = 0
+            while index < len(container):
+                arttag = ''
+                index = container.find('/tags/artwork/', index)
+                if index == -1:
+                    break
+                for char in container[(index + 14):]:
+                    if char.isalpha() or char.isnumeric() or char == '-' or char == ' ':
+                        arttag = arttag + char
+                    else:
+                        break
+                arttags.append(arttag)
+                index += 14
+            index = 0
+            while index < len(container):
+                functiontag = ''
+                index = container.find('/tags/card/', index)
+                if index == -1:
+                    break
+                for char in container[(index + 11):]:
+                    if char.isalpha() or char.isnumeric() or char == '-' or char == ' ':
+                        functiontag = functiontag + char
+                    else:
+                        break
+                functiontags.append(functiontag)
+                index += 11
+
+            unwanted_tags = {'plane', 'location', 'character', 'artist-signature', 'cycle', 'card-names', 'cycle-land'}
+            arttags = [ele for ele in arttags if ele not in unwanted_tags]
+            functiontags = [ele for ele in functiontags if ele not in unwanted_tags]
             print('Art Tags:', card['name'], arttags)
             print('Function Tags:', card['name'], functiontags)
             card['arttags'] = arttags
@@ -264,29 +301,48 @@ def basic_functions(decklist):
 
 
 def tagger_functions(decklist):
-    allarttags = []
-    allfunctags = []
     removalcards = []
+    rampcards = []
+    drawcards = []
+
     for card in decklist:
         if 'Basic Land' not in card['type_line']:
             allarttags.extend(card['arttags'])
             allfunctags.extend(card['functiontags'])
-            for tag in card['functiontags']:
-                if 'removal' in tag:
-                    removalcards.append(card)
-                    break
+            if 'removal' in card['functiontags']:
+                removalcards.append(card)
+            if 'draw' in card['functiontags']:
+                drawcards.append(card)
+            if 'ramp' in card['functiontags']:
+                rampcards.append(card)
+
     commonart = Counter(allarttags)
     commonfunc = Counter(allfunctags)
+
+    print('Most common art tags:\n\t', Counter(allarttags).most_common(10))
+    print('Most common function tags:\n\t', Counter(allfunctags).most_common(10), '\n')
     print(max(commonart, key=commonart.get), 'is the most common art tag (consisting of',
           max(commonart.values()), 'cards)')
-    print(max(commonfunc, key=commonfunc.get), 'is the most common art tag (consisting of',
-          max(commonfunc.values()), 'cards)')
+    print(max(commonfunc, key=commonfunc.get), 'is the most common function tag (consisting of',
+          max(commonfunc.values()), 'cards)', '\n')
 
     print('You have', len(removalcards), 'pieces of removal:')
     cardstr = ''
     for card in removalcards:
         cardstr = cardstr + '[' + card['name'] + '], '
-    print(cardstr)
+    print('\t', cardstr)
+
+    print('You have', len(drawcards), 'pieces of card draw:')
+    cardstr = ''
+    for card in drawcards:
+        cardstr = cardstr + '[' + card['name'] + '], '
+    print('\t', cardstr)
+
+    print('You have', len(rampcards), 'pieces of ramp:')
+    cardstr = ''
+    for card in rampcards:
+        cardstr = cardstr + '[' + card['name'] + '], '
+    print('\t', cardstr)
 
 
 if __name__ == '__main__':
