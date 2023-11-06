@@ -1,20 +1,17 @@
-from lxml import html
-from xml.sax import saxutils
-import requests
+import numpy as np
+from scipy.stats import hypergeom, stats
 
-cardset = 'xln'
-cardcode = 217
-url = 'https://tagger.scryfall.com/card/' + cardset + '/' + str(cardcode)
-print(url)
+gameturn = 3
+wantinhand = 1
+cardsindeck = 13
 
-page = requests.get(url)
-pagetree = html.fromstring(page.content)
-
-
-def inner_html(tree):
-    """ Return inner HTML of lxml element """
-    return (saxutils.escape(tree.text) if tree.text else '') + \
-        ''.join([html.tostring(child, encoding=str) for child in tree.iterchildren()])
-
-
-print(inner_html(pagetree))
+cardsinhand = 7 + gameturn
+exactlyone = hypergeom.pmf(wantinhand, 100, cardsindeck, cardsinhand)
+oneorless = hypergeom.cdf(wantinhand, 100, cardsindeck, cardsinhand)
+k = np.arange(wantinhand)
+zero = hypergeom.pmf(k, 100, cardsindeck, cardsinhand)
+oneormore = 1 - zero[0]
+print(round(exactlyone*100, 2))
+print(round(oneorless*100, 2))
+print(round(zero[0]*100, 2))
+print(round(oneormore*100, 2))

@@ -10,12 +10,17 @@ A multiuse EDH deck analyser
 # 'border_color' 'frame' 'security_stamp' 'full_art' 'textless' 'booster' 'story_spotlight' 'edhrec_rank' 'preview'
 # 'previewed_at' 'prices' 'related_uris':{'tcgplayer_infinite_articles' 'tcgplayer_infinite_decks'} 'edhrec'
 # 'purchase_uris':{'cardmarket' 'cardhoarder'}
+# Jolene: https://www.moxfield.com/decks/7f7-grUvjkWkLpAOKn0Zjw
 # Gaffer: https://www.moxfield.com/decks/5TJaqTq0QUmxfZP5J5MY6w
 # Teysa: https://www.moxfield.com/decks/mskhYkY4vUenK3khBTrcMg
+# Desolation of the Dragon: https://www.moxfield.com/decks/5mkvjl_dTUaW3BrD34-YIg
+# Wiver: https://www.moxfield.com/decks/hSVL7tRkGEufQ10Qqm5HMA
 import json
 import math
 import mtg_parser
 import os.path
+import numpy as np
+from scipy.stats import hypergeom
 from collections import Counter
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -27,7 +32,7 @@ from selenium.webdriver.support import expected_conditions as EC
 # Global variables
 carddata = []
 commandercolours = []
-manasymbols = {'N': 0, 'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0}
+manasymbols = {'N': 0, 'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0, 'P': 0, 'X': 0}
 landmanasymbols = {'C': 0, 'W': 0, 'U': 0, 'B': 0, 'R': 0, 'G': 0}
 typedist = {'planeswalkers': 0, 'creatures': 0, 'sorceries': 0, 'instants': 0, 'artifacts': 0, 'enchantments': 0,
             'lands': 0}
@@ -37,14 +42,17 @@ allfunctags = []
 
 def main():
     """
-    Execute the main function, calling various other functions at the user's request
+    Execute the main function, calling various other functions
     """
-    if not os.path.isfile(r"C:\Users\Fred\Desktop\CommanderCraft\decklist.json"):
-        print('Please input your deck URL below:')
-        decklist = process_deck('https://www.moxfield.com/decks/5TJaqTq0QUmxfZP5J5MY6w')
+    print('Enter below either an existing deck name, or the name of the new deck you would like to create:')
+    deckname = input()
+    if not os.path.isfile('C:\\Users\\Fred\\Desktop\\CommanderCraft\\' + deckname + '.json'):
+        print('New deck! Please input your deck URL below:')
+        url = input()
+        decklist = process_deck(url, deckname)
     else:
         print('Deck located on file! Retrieving...')
-        dataform = str("decklist.json").strip("'<>() ").replace('\'', '\"')
+        dataform = str(deckname + '.json').strip("'<>() ").replace('\'', '\"')
         with open(dataform, encoding='utf8') as json_file:
             decklist = json.load(json_file)
     if not check_legality(decklist):
@@ -53,28 +61,31 @@ def main():
     tagger_functions(decklist)
 
 
-def process_deck(deckinput):
+def process_deck(deckinput, deckname):
     """
-    Takes deckinput from user, loads oracle card data and creates a decklist.json out of it, including tags
+    Takes deckinput from user, loads oracle card data and creates a json file out of it, including tags
+    :param deckname:
     :param deckinput:
     :return decklist:
     """
     # Loads the Scryfall card data from JSON to Python dictionary
-    print('Retrieving Card Data...')
-    dataform = str("oracle_cards.json").strip("'<>() ").replace('\'', '\"')
+    print('\n---------- Retrieving Card Data and Creating Deck ----------')
+    print('Retrieving oracle card data...')
+    dataform = str("default-cards.json").strip("'<>() ").replace('\'', '\"')
     if dataform is None:
         exit('Error parsing card data')
     with open(dataform, encoding='utf8') as json_file:
         carddata = json.load(json_file)
 
     # Creates a new decklist out of Scryfall data, using the decklist provided
-    print('Processing now...')
+    print('Creating deck...')
     rawdecklist = mtg_parser.parse_deck(deckinput)
     decklist = []
     for card in rawdecklist:
         i = 0
         for _ in carddata:
-            if carddata[i].get('name') == card.name:
+            if (carddata[i].get('name') == card.name and carddata[i].get('collector_number') == card.number
+                    and carddata[i].get('set') == card.extension):
                 j = 0
                 while j < card.quantity:
                     decklist.append(carddata[i])
@@ -82,21 +93,20 @@ def process_deck(deckinput):
             i += 1
     card_tags(decklist)
     print('Writing new decklist txt file...')
-    with open('decklist.json', 'x') as deck_file:
+    with open(deckname + '.json', 'x') as deck_file:
         deck_file.write(json.dumps(decklist))
+    print('Done!')
     return decklist
 
 
 def card_tags(decklist):
-    print('Beginning tag search...')
+    print('\n---------- Adding Tags ----------')
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    options.experimental_options['prefs'] = {
-        'profile.managed_default_content_settings.images': 2
-    }
+    options.experimental_options['prefs'] = {'profile.managed_default_content_settings.images': 2}
     driver = webdriver.Chrome(options)
     for card in decklist:
         if 'Basic Land' not in card['type_line']:
@@ -161,12 +171,15 @@ def card_tags(decklist):
                         break
                 functiontags.append(functiontag)
                 index += 11
+            print(card['name'])
+            print(arttags)
+            print(functiontags)
 
             unwanted_tags = {'plane', 'location', 'character', 'artist-signature', 'cycle', 'card-names', 'cycle-land'}
             arttags = [ele for ele in arttags if ele not in unwanted_tags]
             functiontags = [ele for ele in functiontags if ele not in unwanted_tags]
-            print('Art Tags:', card['name'], arttags)
-            print('Function Tags:', card['name'], functiontags)
+            # print('Art Tags:', card['name'], arttags)
+            # print('Function Tags:', card['name'], functiontags)
             card['arttags'] = arttags
             card['functiontags'] = functiontags
     driver.quit()
@@ -178,7 +191,7 @@ def check_legality(decklist):
     :param decklist:
     :return true if legal, false if illegal:
     """
-    print('Checking deck legality...')
+    print('\n---------- Checking deck legality ----------')
     commandercolours.extend(decklist[0]['color_identity'])
     print("Commander's colour identity: " + str(commandercolours))
     if not len(decklist) == 100:
@@ -200,6 +213,7 @@ def basic_functions(decklist):
     Takes a decklist input and prints a basic analysis of the deck statistics
     :param decklist:
     """
+    print('\n---------- Performing Basic Analysis ----------')
     # Type distribution
     for card in decklist:
         if 'Planeswalker' in card['type_line']:
@@ -222,18 +236,20 @@ def basic_functions(decklist):
             continue
         if 'Land' in card['type_line']:
             typedist['lands'] += 1
+            continue
 
     # Average CMC, Power and Toughness
     avgcmc = avgpwr = avgtuf = 0.0
     cmccounter = statcounter = 0.0
     for card in decklist:
-        if 'Land' not in card['type_line']:
-            avgcmc += card['cmc']
-            cmccounter += 1.0
-        if 'Creature' in card['type_line']:
-            avgpwr += float(card['power'])
-            avgtuf += float(card['toughness'])
-            statcounter += 1.0
+        if 'card_faces' not in card:
+            if 'Land' not in card['type_line']:
+                avgcmc += card['cmc']
+                cmccounter += 1.0
+            if 'Creature' in card['type_line']:
+                avgpwr += float(card['power'])
+                avgtuf += float(card['toughness'])
+                statcounter += 1.0
     avgcmclands = avgcmc / (cmccounter + typedist['lands'])
     avgcmc /= cmccounter
     avgpwr /= statcounter
@@ -242,9 +258,10 @@ def basic_functions(decklist):
     # Mana symbols and card colours
     for card in decklist:
         if 'Land' not in card['type_line']:
-            for char in card['mana_cost']:
-                if char.isalpha():
-                    manasymbols[char] += 1
+            if 'mana_cost' in card:
+                for char in card['mana_cost']:
+                    if char.isalpha():
+                        manasymbols[char] += 1
         else:
             if 'produced_mana' in card:
                 for char in card['produced_mana']:
@@ -259,12 +276,12 @@ def basic_functions(decklist):
     sets = []
     types = []
     for card in decklist:
-        artists.append(card['artist'])
         if 'Creature' in card['type_line']:
             creaturetypes = card['type_line'].split('—', 1)
             types.extend(creaturetypes[1].split())
         if 'Basic Land' not in card['type_line']:
             sets.append(card['set'])
+            artists.append(card['artist'])
     commonartists = Counter(artists)
     commonsets = Counter(sets)
     commontypes = Counter(types)
@@ -283,20 +300,24 @@ def basic_functions(decklist):
     for cardtype in typedist.keys():
         print('\t' + cardtype, typedist[cardtype])
     for symbol in manasymbols:
-        if not manasymbols[symbol] == 0:
-            percentage = math.ceil((manasymbols[symbol] / totalsymbols) * 100)
-            print(str(percentage) + '% of all mana symbols are ' + symbol)
+        if not symbol == 'P' and not symbol == 'X':
+            if not manasymbols[symbol] == 0:
+                percentage = math.ceil((manasymbols[symbol] / totalsymbols) * 100)
+                print(str(percentage) + '% of all mana symbols are ' + symbol)
     for symbol in landmanasymbols:
         if (not landmanasymbols[symbol] == 0 and symbol in commandercolours) or symbol == 'C':
             percentage = math.ceil((landmanasymbols[symbol] / totallandsymbols) * 100)
             print(landmanasymbols[symbol], 'out of', typedist['lands'], 'lands produce', symbol, 'mana (', percentage,
                   '% of all mana symbols on lands )')
-    print(max(commonartists, key=commonartists.get), 'is the most common artist (consisting of',
+    print('\n[' + str(max(commonartists, key=commonartists.get)) + ']', 'is the most common artist',
           max(commonartists.values()), 'cards)')
-    print(max(commonsets, key=commonsets.get), 'is the most common set (consisting of', max(commonsets.values()),
+    print('\t', commonartists.most_common(10))
+    print('[' + str(max(commonsets, key=commonsets.get)) + ']', 'is the most common set', max(commonsets.values()),
           'cards)')
-    print(max(commontypes, key=commontypes.get), 'is the most common creature type (consisting of',
+    print('\t', commonsets.most_common(10))
+    print('[' + str(max(commontypes, key=commontypes.get)) + ']', 'is the most common creature type',
           max(commontypes.values()), 'cards)')
+    print('\t', commontypes.most_common(5))
     print('Average EDHREC rank:', edhrectotal)
 
 
@@ -305,44 +326,67 @@ def tagger_functions(decklist):
     rampcards = []
     drawcards = []
 
+    print('\n---------- Performing Tag Analysis ----------')
     for card in decklist:
         if 'Basic Land' not in card['type_line']:
             allarttags.extend(card['arttags'])
             allfunctags.extend(card['functiontags'])
             if 'removal' in card['functiontags']:
                 removalcards.append(card)
-            if 'draw' in card['functiontags']:
+            if ('draw' in card['functiontags'] or 'rummage' in card['functiontags'] or
+                    'loot' in card['functiontags']):
                 drawcards.append(card)
             if 'ramp' in card['functiontags']:
                 rampcards.append(card)
 
-    commonart = Counter(allarttags)
-    commonfunc = Counter(allfunctags)
-
     print('Most common art tags:\n\t', Counter(allarttags).most_common(10))
-    print('Most common function tags:\n\t', Counter(allfunctags).most_common(10), '\n')
-    print(max(commonart, key=commonart.get), 'is the most common art tag (consisting of',
-          max(commonart.values()), 'cards)')
-    print(max(commonfunc, key=commonfunc.get), 'is the most common function tag (consisting of',
-          max(commonfunc.values()), 'cards)', '\n')
+    print('Most common function tags:\n\t', Counter(allfunctags).most_common(10))
 
-    print('You have', len(removalcards), 'pieces of removal:')
+    print('\nYou have', len(removalcards), 'pieces of removal:')
     cardstr = ''
     for card in removalcards:
         cardstr = cardstr + '[' + card['name'] + '], '
     print('\t', cardstr)
-
-    print('You have', len(drawcards), 'pieces of card draw:')
+    result = hypergeo_probability(len(removalcards), 5, 1)
+    print('Hypergeometric: By turn FIVE, there is a', str(result) + '%', 'chance that you will have drawn at least '
+                                                                         'one removal spell')
+    print('\nYou have', len(drawcards), 'pieces of card draw: (counting loot and rummage effects)')
     cardstr = ''
     for card in drawcards:
         cardstr = cardstr + '[' + card['name'] + '], '
     print('\t', cardstr)
-
-    print('You have', len(rampcards), 'pieces of ramp:')
+    result = hypergeo_probability(len(drawcards), 3, 1)
+    print('Hypergeometric: By turn THREE, there is a', str(result) + '%', 'chance that you will have drawn at least '
+                                                                          'one card draw spell')
+    print('\nYou have', len(rampcards), 'pieces of ramp:')
     cardstr = ''
     for card in rampcards:
         cardstr = cardstr + '[' + card['name'] + '], '
     print('\t', cardstr)
+    result = hypergeo_probability(len(rampcards), 3, 1)
+    print('Hypergeometric: By turn THREE, there is a', str(result) + '%', 'chance that you will have drawn at least '
+                                                                          'one ramp spell')
+
+
+def hypergeo_probability(cardsindeck, gameturn, wantinhand):
+    """
+    Calculate the cumulative hypergeometric probabilities of drawing x or more of a card type, by n turn, where there
+    is k number of that type of card in your 100 card deck
+    :param cardsindeck: Number of cardtype in deck
+    :param gameturn: Game turn number
+    :param wantinhand: Desired number of that cardtype in hand
+    """
+    cardsinhand = 7 + gameturn
+    # exactlyone = hypergeom.pmf(wantinhand, 100, cardsindeck, cardsinhand)
+    # oneorless = hypergeom.cdf(wantinhand, 100, cardsindeck, cardsinhand)
+    k = np.arange(wantinhand)
+    zero = hypergeom.pmf(k, 100, cardsindeck, cardsinhand)
+    oneormore = 1 - zero[0]
+    # print(round(exactlyone * 100, 2))
+    # print(round(oneorless * 100, 2))
+    # print(round(zero[0] * 100, 2))
+    result = round(oneormore * 100, 2)
+    return result
 
 
 if __name__ == '__main__':
