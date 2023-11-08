@@ -16,6 +16,7 @@ A multipurpose EDH deck analyser for Magic the Gathering
     - Mana symbols on cards compared with mana symbols on lands
     - Average EDHREC rank
     - Artist, set, and creature type distributions
+    - Token information, what tokens are required to play and how many of them on average
 
   - Tagger Functions
     - Most common art tags and function tags
@@ -27,7 +28,6 @@ A multipurpose EDH deck analyser for Magic the Gathering
 
 ### Roadmap:
   - The "Auto-Lander", take into account mana symbols on cards and intuitively construct a 37 card landbase
-  - Token information, what tokens are required to play and how many of them on average
   - 'Strictly better/worse' and 'similar to' html code from Tagger
   - Using EDHREC data: all possible combos, then, potential combos by adding one more card etc
   - Pricing information (combine this with "strictly better/worse" tags for a down/upgrader function)
