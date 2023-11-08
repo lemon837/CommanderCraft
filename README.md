@@ -21,10 +21,6 @@ A multipurpose EDH deck analyser for Magic the Gathering
     - Most common art tags and function tags
     - Counters for amount of removal, card draw, and ramp
     - Hypergeometric probability calculations - "By turn x, y% chance to have drawn at least one card of z-type"
-    
-### Bug Fixing Required:
-  - Cardtype distributions not displaying correct numbers, could be an issue with how cards are added now using
-    'default-cards.json' instead of the old method (see 'jolene.json' card distributions)
 
 ### For Bulk Data Testing:
   - Average EDHREC ranks
