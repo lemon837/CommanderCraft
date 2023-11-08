@@ -38,6 +38,7 @@ typedist = {'planeswalkers': 0, 'creatures': 0, 'sorceries': 0, 'instants': 0, '
             'lands': 0}
 allarttags = []
 allfunctags = []
+tokens = []
 
 
 def main():
@@ -112,6 +113,7 @@ def card_tags(decklist):
         if 'Basic Land' not in card['type_line']:
             arttags = []
             functiontags = []
+            hasmisctags = False
             url = 'https://tagger.scryfall.com/card/' + card['set'] + '/' + str(card['collector_number'])
             driver.get(url)
             WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(),"
@@ -132,7 +134,7 @@ def card_tags(decklist):
                         else:
                             break
                     arttags.append(arttag)
-                if element.find('/tags/card/') > 0:
+                elif element.find('/tags/card/') > 0:
                     functiontag = ''
                     substr = element.find('/tags/card/') + 11
                     for char in element[substr:]:
@@ -141,6 +143,20 @@ def card_tags(decklist):
                         else:
                             break
                     functiontags.append(functiontag)
+                else:
+                    misctags = {'better-than': [], 'worse-than': [], 'mirror': [], 'colorshifted': [], 'with-body': [],
+                                'without-body': [], 'similar-to': []}
+                    hasmisctags = True
+                    for tag in misctags:
+                        if element.find(tag) > 0:
+                            foundtag = ''
+                            substr = element.find('rel="nofollow">') + 15
+                            for char in element[substr:]:
+                                if char.isalpha() or char.isnumeric() or char == '-' or char == ' ' or char == '\'':
+                                    foundtag = foundtag + char
+                                else:
+                                    break
+                            misctags[tag].append(foundtag)
 
             # Finds all inherited tags ('tagging-ancestors')
             container = soup.find_all('div', attrs={'class': 'tagging-ancestors'})
@@ -171,17 +187,18 @@ def card_tags(decklist):
                         break
                 functiontags.append(functiontag)
                 index += 11
-            print(card['name'])
-            print(arttags)
-            print(functiontags)
 
             unwanted_tags = {'plane', 'location', 'character', 'artist-signature', 'cycle', 'card-names', 'cycle-land'}
             arttags = [ele for ele in arttags if ele not in unwanted_tags]
             functiontags = [ele for ele in functiontags if ele not in unwanted_tags]
-            # print('Art Tags:', card['name'], arttags)
-            # print('Function Tags:', card['name'], functiontags)
             card['arttags'] = arttags
             card['functiontags'] = functiontags
+            print(card['name'])
+            print(arttags)
+            print(functiontags)
+            if hasmisctags:
+                print(misctags)
+                card['misctags'] = misctags
     driver.quit()
 
 
@@ -213,34 +230,58 @@ def basic_functions(decklist):
     Takes a decklist input and prints a basic analysis of the deck statistics
     :param decklist:
     """
+    tokennames = []
+    avgcmc = avgpwr = avgtuf = 0.0
+    cmccounter = statcounter = 0.0
+    artists = []
+    sets = []
+    types = []
+    edhrectotal = 0
+
     print('\n---------- Performing Basic Analysis ----------')
+    # Token information
+    for card in decklist:
+        if 'all_parts' in card:
+            for part in card['all_parts']:
+                if 'component' in part:
+                    if 'token' in part['component']:
+                        tokens.append(part)
+    for token in tokens:
+        for duptoken in tokens:
+            if token['name'] == duptoken['name']:
+                tokens.remove(duptoken)
+    for token in tokens:
+        tokennames.append(token['name'])
+
     # Type distribution
     for card in decklist:
-        if 'Planeswalker' in card['type_line']:
+        if 'card_faces' in card:
+            tempcard = card['card_faces'][0]
+        else:
+            tempcard = card
+        if 'Planeswalker' in tempcard['type_line']:
             typedist['planeswalkers'] += 1
             continue
-        if 'Creature' in card['type_line']:
+        if 'Creature' in tempcard['type_line']:
             typedist['creatures'] += 1
             continue
-        if 'Sorcery' in card['type_line']:
+        if 'Sorcery' in tempcard['type_line']:
             typedist['sorceries'] += 1
             continue
-        if 'Instant' in card['type_line']:
+        if 'Instant' in tempcard['type_line']:
             typedist['instants'] += 1
             continue
-        if 'Artifact' in card['type_line']:
+        if 'Land' in tempcard['type_line']:
+            typedist['lands'] += 1
+            continue
+        if 'Artifact' in tempcard['type_line']:
             typedist['artifacts'] += 1
             continue
-        if 'Enchantment' in card['type_line']:
+        if 'Enchantment' in tempcard['type_line']:
             typedist['enchantments'] += 1
-            continue
-        if 'Land' in card['type_line']:
-            typedist['lands'] += 1
             continue
 
     # Average CMC, Power and Toughness
-    avgcmc = avgpwr = avgtuf = 0.0
-    cmccounter = statcounter = 0.0
     for card in decklist:
         if 'card_faces' not in card:
             if 'Land' not in card['type_line']:
@@ -272,9 +313,6 @@ def basic_functions(decklist):
                         landmanasymbols['R'] + landmanasymbols['G'])
 
     # Most common artist and set
-    artists = []
-    sets = []
-    types = []
     for card in decklist:
         if 'Creature' in card['type_line']:
             creaturetypes = card['type_line'].split('—', 1)
@@ -287,7 +325,6 @@ def basic_functions(decklist):
     commontypes = Counter(types)
 
     # EDHREC Rank
-    edhrectotal = 0
     for card in decklist:
         if 'edhrec_rank' in card:
             edhrectotal += card['edhrec_rank']
@@ -309,6 +346,8 @@ def basic_functions(decklist):
             percentage = math.ceil((landmanasymbols[symbol] / totallandsymbols) * 100)
             print(landmanasymbols[symbol], 'out of', typedist['lands'], 'lands produce', symbol, 'mana (', percentage,
                   '% of all mana symbols on lands )')
+    print('\nAverage EDHREC rank:', edhrectotal)
+    print('\nTokens required:', tokennames)
     print('\n[' + str(max(commonartists, key=commonartists.get)) + ']', 'is the most common artist',
           max(commonartists.values()), 'cards)')
     print('\t', commonartists.most_common(10))
@@ -318,7 +357,6 @@ def basic_functions(decklist):
     print('[' + str(max(commontypes, key=commontypes.get)) + ']', 'is the most common creature type',
           max(commontypes.values()), 'cards)')
     print('\t', commontypes.most_common(5))
-    print('Average EDHREC rank:', edhrectotal)
 
 
 def tagger_functions(decklist):
@@ -327,6 +365,13 @@ def tagger_functions(decklist):
     drawcards = []
 
     print('\n---------- Performing Tag Analysis ----------')
+    """
+    for card in decklist:
+        if 'misctags' in card:
+            for tag in card['misctags']:
+    """
+
+    # Compile the allarttags and allfunctiontags lists to find the most common of both lists
     for card in decklist:
         if 'Basic Land' not in card['type_line']:
             allarttags.extend(card['arttags'])
@@ -341,7 +386,6 @@ def tagger_functions(decklist):
 
     print('Most common art tags:\n\t', Counter(allarttags).most_common(10))
     print('Most common function tags:\n\t', Counter(allfunctags).most_common(10))
-
     print('\nYou have', len(removalcards), 'pieces of removal:')
     cardstr = ''
     for card in removalcards:
