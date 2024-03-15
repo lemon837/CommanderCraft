@@ -1,20 +1,6 @@
 """
 A multiuse EDH deck analyser
 """
-# {'object' 'id' 'oracle_id' 'multiverse_ids' 'mtgo_id' 'tcgplayer_id' 'cardmarket_id' 'name' 'lang' 'released_at'
-# 'uri' 'scryfall_uri' 'layout' 'highres_image' 'image_status' 'image_uris' 'normal' 'large' 'png' 'art_crop'
-# 'border_crop' 'mana_cost' 'cmc' 'type_line' 'oracle_text' 'power' 'toughness' 'colors' 'color_identity' 'keywords'
-# 'legalities' 'games' 'reserved' 'foil' 'nonfoil' 'finishes' 'oversized' 'promo' 'reprint' 'variation' 'set_id' 'set'
-# 'set_name' 'set_type' 'set_uri' 'set_search_uri' 'scryfall_set_uri' 'rulings_uri' 'prints_search_uri'
-# 'collector_number' 'digital' 'rarity' 'flavor_text' 'card_back_id' 'artist' 'artist_ids' 'illustration_id'
-# 'border_color' 'frame' 'security_stamp' 'full_art' 'textless' 'booster' 'story_spotlight' 'edhrec_rank' 'preview'
-# 'previewed_at' 'prices' 'related_uris':{'tcgplayer_infinite_articles' 'tcgplayer_infinite_decks'} 'edhrec'
-# 'purchase_uris':{'cardmarket' 'cardhoarder'}
-# Jolene: https://www.moxfield.com/decks/7f7-grUvjkWkLpAOKn0Zjw
-# Gaffer: https://www.moxfield.com/decks/5TJaqTq0QUmxfZP5J5MY6w
-# Teysa: https://www.moxfield.com/decks/mskhYkY4vUenK3khBTrcMg
-# Desolation of the Dragon: https://www.moxfield.com/decks/5mkvjl_dTUaW3BrD34-YIg
-# Wiver: https://www.moxfield.com/decks/hSVL7tRkGEufQ10Qqm5HMA
 import json
 import math
 import mtg_parser
@@ -130,7 +116,7 @@ def card_tags(decklist):
                     substr = element.find('/tags/artwork/') + 14
                     for char in element[substr:]:
                         if char.isalpha() or char.isnumeric() or char == '-' or char == ' ':
-                            arttag = arttag + char
+                            arttag += char
                         else:
                             break
                     arttags.append(arttag)
@@ -139,7 +125,7 @@ def card_tags(decklist):
                     substr = element.find('/tags/card/') + 11
                     for char in element[substr:]:
                         if char.isalpha() or char.isnumeric() or char == '-' or char == ' ':
-                            functiontag = functiontag + char
+                            functiontag += char
                         else:
                             break
                     functiontags.append(functiontag)
@@ -153,7 +139,7 @@ def card_tags(decklist):
                             substr = element.find('rel="nofollow">') + 15
                             for char in element[substr:]:
                                 if char.isalpha() or char.isnumeric() or char == '-' or char == ' ' or char == '\'':
-                                    foundtag = foundtag + char
+                                    foundtag += char
                                 else:
                                     break
                             misctags[tag].append(foundtag)
@@ -169,7 +155,7 @@ def card_tags(decklist):
                     break
                 for char in container[(index + 14):]:
                     if char.isalpha() or char.isnumeric() or char == '-' or char == ' ':
-                        arttag = arttag + char
+                        arttag += char
                     else:
                         break
                 arttags.append(arttag)
@@ -182,7 +168,7 @@ def card_tags(decklist):
                     break
                 for char in container[(index + 11):]:
                     if char.isalpha() or char.isnumeric() or char == '-' or char == ' ':
-                        functiontag = functiontag + char
+                        functiontag += char
                     else:
                         break
                 functiontags.append(functiontag)
