@@ -21,7 +21,7 @@ A multipurpose EDH deck analyser for Magic the Gathering
   - Tagger Functions
     - Most common art tags and function tags
     - Counters for amount of removal, card draw, and ramp
-    - Hypergeometric probability calculations - "By turn x, y% chance to have drawn at least one card of z-type"
+    - HYPERGEOMETRIC PROBABILITIES! - "By turn x, y% chance to have drawn at least one card of z-type"
 
 ### For Bulk Data Testing:
   - Average EDHREC ranks
