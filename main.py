@@ -407,8 +407,8 @@ def hypergeo_probability(cardsindeck, gameturn, wantinhand):
     :param wantinhand: Desired number of that cardtype in hand
     """
     cardsinhand = 7 + gameturn
-    # exactlyone = hypergeom.pmf(wantinhand, 100, cardsindeck, cardsinhand)
-    # oneorless = hypergeom.cdf(wantinhand, 100, cardsindeck, cardsinhand)
+    exactlyone = hypergeom.pmf(wantinhand, 100, cardsindeck, cardsinhand)
+    oneorless = hypergeom.cdf(wantinhand, 100, cardsindeck, cardsinhand)
     k = np.arange(wantinhand)
     zero = hypergeom.pmf(k, 100, cardsindeck, cardsinhand)
     oneormore = 1 - zero[0]
