@@ -1,5 +1,5 @@
 # CommanderCraft
-A multipurpose EDH deck analyser for the Magic the Gathering card game.
+(WIP) A multipurpose EDH deck analyser for the Magic the Gathering card game.
 
 ### Deck Analysis:
   - Uses bulkdata download of all default-cards from the Scryfall API, parses deck URL into rawdecklist
